@@ -1,32 +1,18 @@
 import pygame
 import random
 import math
-import sys
 
 # Initialize Pygame
 pygame.init()
 
 # Screen dimensions
-WIDTH, HEIGHT = 1200, 800  # Larger screen size
+WIDTH, HEIGHT = 800, 800  # Larger screen size
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Rock Paper Scissors Lizard Spock Battle")
 
 # FPS setting
 FPS = 60
-ICON_SIZE = 25
-default_icons = 1  # Default number of icons per group
-additional_icons = 0  # User input
-game_running = False
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GRAY = (200, 200, 200)
-BUTTON_COLOR = (100, 200, 100)
-
-# Fonts
-font = pygame.font.Font(None, 36)
-big_font = pygame.font.Font(None, 74)
+N = 20  # Number of each icon per type
 
 # Function to scale images while preserving aspect ratio
 def scale_image(image, target_height):
@@ -36,11 +22,12 @@ def scale_image(image, target_height):
     return pygame.transform.scale(image, (new_width, target_height))
 
 # Load and scale PNG images
-ROCK_IMG = scale_image(pygame.image.load("rock.png"), ICON_SIZE)
-PAPER_IMG = scale_image(pygame.image.load("paper.png"), ICON_SIZE)
-SCISSORS_IMG = scale_image(pygame.image.load("scissors.png"), ICON_SIZE)
-LIZARD_IMG = scale_image(pygame.image.load("lizard.png"), ICON_SIZE)
-SPOCK_IMG = scale_image(pygame.image.load("spock.png"), ICON_SIZE)
+TARGET_HEIGHT = 25  # Smaller icons
+ROCK_IMG = scale_image(pygame.image.load("rock.png"), TARGET_HEIGHT)
+PAPER_IMG = scale_image(pygame.image.load("paper.png"), TARGET_HEIGHT)
+SCISSORS_IMG = scale_image(pygame.image.load("scissors.png"), TARGET_HEIGHT)
+LIZARD_IMG = scale_image(pygame.image.load("lizard.png"), TARGET_HEIGHT)
+SPOCK_IMG = scale_image(pygame.image.load("spock.png"), TARGET_HEIGHT)
 
 ICON_WIDTH = ROCK_IMG.get_width()
 ICON_HEIGHT = ROCK_IMG.get_height()
@@ -57,189 +44,149 @@ RPSLS_RULES = {
 # Center of the screen
 CENTER_X, CENTER_Y = WIDTH // 2, HEIGHT // 2
 
-# Button class
-class Button:
-    def __init__(self, x, y, width, height, text, action):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = text
-        self.action = action
-
-    def draw(self):
-        pygame.draw.rect(screen, BUTTON_COLOR, self.rect)
-        text_surf = font.render(self.text, True, BLACK)
-        text_rect = text_surf.get_rect(center=self.rect.center)
-        screen.blit(text_surf, text_rect)
-
-    def is_clicked(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.rect.collidepoint(event.pos):
-                return True
-        return False
-
-# Input box class
-class InputBox:
-    def __init__(self, x, y, width, height):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.color = GRAY
-        self.text = ''
-        self.active = False
-
-    def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            # Toggle the active state
-            self.active = self.rect.collidepoint(event.pos)
-            self.color = BLACK if self.active else GRAY
-        elif event.type == pygame.KEYDOWN and self.active:
-            if event.key == pygame.K_RETURN:
-                return self.text
-            elif event.key == pygame.K_BACKSPACE:
-                self.text = self.text[:-1]
-            elif event.unicode.isdigit():
-                self.text += event.unicode
-        return None
-
-    def draw(self):
-        pygame.draw.rect(screen, self.color, self.rect, 2)
-        text_surf = font.render(self.text, True, BLACK)
-        screen.blit(text_surf, (self.rect.x + 5, self.rect.y + 5))
-
-# Icon class
+# Define the classes
 class Icon:
     def __init__(self, x, y, icon_type):
         self.x = x
         self.y = y
-        self.type = icon_type
+
+        # Velocity initialized towards the center with some randomness
         angle = math.atan2(CENTER_Y - y, CENTER_X - x)
-        speed = random.uniform(1, 2)
+        speed = random.uniform(1, 2)  # Adjust initial speed
         self.vx = math.cos(angle) * speed
         self.vy = math.sin(angle) * speed
 
+        self.type = icon_type
+
     def move(self):
+        # Small random chance to change direction
+        if random.random() < 0.01:  # 1% chance per frame
+            random_angle = random.uniform(0, 2 * math.pi)
+            random_speed = random.uniform(1, 2)
+            self.vx = math.cos(random_angle) * random_speed
+            self.vy = math.sin(random_angle) * random_speed
+
         self.x += self.vx
         self.y += self.vy
 
-        # Bounce off walls
-        if self.x < 0 or self.x > WIDTH - ICON_WIDTH:
-            self.vx *= -1
-        if self.y < 0 or self.y > HEIGHT - ICON_HEIGHT:
-            self.vy *= -1
+        # Bounce off walls and redirect towards center
+        if self.x < 0:
+            self.x = 0
+            self.vx = abs(self.vx)
+        elif self.x > WIDTH - ICON_WIDTH:
+            self.x = WIDTH - ICON_WIDTH
+            self.vx = -abs(self.vx)
 
-    def draw(self):
-        img = {"rock": ROCK_IMG, "paper": PAPER_IMG, "scissors": SCISSORS_IMG,
-               "lizard": LIZARD_IMG, "spock": SPOCK_IMG}[self.type]
-        screen.blit(img, (self.x, self.y))
+        if self.y < 0:
+            self.y = 0
+            self.vy = abs(self.vy)
+        elif self.y > HEIGHT - ICON_HEIGHT:
+            self.y = HEIGHT - ICON_HEIGHT
+            self.vy = -abs(self.vy)
 
-# Main menu
-def main_menu():
-    global additional_icons, game_running
-    input_box = InputBox(500, 300, 200, 50)
-    play_button = Button(500, 400, 200, 50, "Play", start_game)
-    icons_button = Button(500, 500, 200, 50, "Set", None)
+    def draw(self, screen):
+        if self.type == "rock":
+            screen.blit(ROCK_IMG, (self.x, self.y))
+        elif self.type == "paper":
+            screen.blit(PAPER_IMG, (self.x, self.y))
+        elif self.type == "scissors":
+            screen.blit(SCISSORS_IMG, (self.x, self.y))
+        elif self.type == "lizard":
+            screen.blit(LIZARD_IMG, (self.x, self.y))
+        elif self.type == "spock":
+            screen.blit(SPOCK_IMG, (self.x, self.y))
 
-    while not game_running:
-        screen.fill(WHITE)
+def handle_collision(icon1, icon2):
+    # Calculate the direction of the collision
+    dx = icon1.x - icon2.x
+    dy = icon1.y - icon2.y
+    distance = math.sqrt(dx**2 + dy**2)
 
-        # Draw input box and buttons
-        input_box.draw()
-        play_button.draw()
-        icons_button.draw()
+    if distance == 0 or distance >= ICON_WIDTH:  # Prevent division by zero or no collision
+        return
 
-        # Handle events
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+    # Resolve overlap by moving icons apart
+    overlap = ICON_WIDTH - distance
+    move_x = dx / distance * overlap / 2
+    move_y = dy / distance * overlap / 2
 
-            if input_box.active:
-                result = input_box.handle_event(event)
-                if result is not None:
-                    additional_icons = int(result)
+    icon1.x += move_x
+    icon1.y += move_y
+    icon2.x -= move_x
+    icon2.y -= move_y
 
-            if play_button.is_clicked(event):
-                play_button.action()
+    # Swap velocities based on collision angle
+    normal_x = dx / distance
+    normal_y = dy / distance
 
-        # Display instructions
-        instructions = "Enter number of icons to add and press 'Set', then press 'Play'."
-        text_surf = font.render(instructions, True, BLACK)
-        screen.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, 200))
+    # Dot product of velocity and normal
+    dot1 = icon1.vx * normal_x + icon1.vy * normal_y
+    dot2 = icon2.vx * normal_x + icon2.vy * normal_y
 
+    # Update velocities
+    icon1.vx -= 2 * dot1 * normal_x
+    icon1.vy -= 2 * dot1 * normal_y
+    icon2.vx -= 2 * dot2 * normal_x
+    icon2.vy -= 2 * dot2 * normal_y
+
+    # Determine the winner based on RPSLS rules
+    if icon1.type != icon2.type:
+        if icon2.type in RPSLS_RULES[icon1.type]:
+            icon2.type = icon1.type  # icon1 wins
+        elif icon1.type in RPSLS_RULES[icon2.type]:
+            icon1.type = icon2.type  # icon2 wins
+
+# Assign starting positions for each group
+start_positions = {
+    "rock": (0, 0),  # Top-left
+    "paper": (WIDTH - ICON_WIDTH, 0),  # Top-right
+    "scissors": (0, HEIGHT - ICON_HEIGHT),  # Bottom-left
+    "lizard": (WIDTH - ICON_WIDTH, HEIGHT - ICON_HEIGHT),  # Bottom-right
+    "spock": (WIDTH // 2 - ICON_WIDTH // 2, HEIGHT // 2 - ICON_HEIGHT // 2),  # Center
+}
+
+# Create icons
+icons = []
+for icon_type, (start_x, start_y) in start_positions.items():
+    for _ in range(N):
+        x = random.randint(start_x, start_x + ICON_WIDTH)
+        y = random.randint(start_y, start_y + ICON_HEIGHT)
+        icons.append(Icon(x, y, icon_type))
+
+# Main game loop
+clock = pygame.time.Clock()
+running = True
+while running:
+    screen.fill((255, 255, 255))  # Clear the screen with white
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Move and draw icons
+    for icon in icons:
+        icon.move()
+        icon.draw(screen)
+
+    # Check collisions and bounce
+    for i in range(len(icons)):
+        for j in range(i + 1, len(icons)):
+            handle_collision(icons[i], icons[j])
+
+    # Ensure final frame updates before checking for victory
+    pygame.display.flip()
+
+    # Check if all icons are the same type
+    types = {icon.type for icon in icons}
+    if len(types) == 1:
+        pygame.time.wait(200)  # Ensure the last conversion is shown
+        font = pygame.font.Font(None, 74)
+        text = font.render(f"{list(types)[0].capitalize()} Wins!", True, (0, 0, 0))
+        screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - text.get_height() // 2))
         pygame.display.flip()
+        pygame.time.wait(3000)
+        running = False
 
-# Start the game
-def start_game():
-    global game_running, icons
-    icons = generate_icons(default_icons + additional_icons)
-    game_running = True
+    clock.tick(FPS)
 
-# Restart the game
-def restart_game():
-    global game_running
-    game_running = False
-    main_menu()
-
-# Generate icons
-def generate_icons(num_icons):
-    start_positions = {
-        "rock": (0, 0),  # Top-left
-        "paper": (WIDTH - ICON_WIDTH, 0),  # Top-right
-        "scissors": (0, HEIGHT - ICON_HEIGHT),  # Bottom-left
-        "lizard": (WIDTH - ICON_WIDTH, HEIGHT - ICON_HEIGHT),  # Bottom-right
-        "spock": (CENTER_X - ICON_WIDTH // 2, CENTER_Y - ICON_HEIGHT // 2)  # Center
-    }
-    icons = []
-    for icon_type, (start_x, start_y) in start_positions.items():
-        icons.append(Icon(start_x, start_y, icon_type))
-        for _ in range(num_icons - 1):
-            x = random.randint(start_x, start_x + ICON_WIDTH)
-            y = random.randint(start_y, start_y + ICON_HEIGHT)
-            icons.append(Icon(x, y, icon_type))
-    return icons
-
-# Victory screen
-def victory_screen(winner):
-    restart_button = Button(500, 400, 200, 50, "Restart", restart_game)
-    while True:
-        screen.fill(WHITE)
-        text = f"{winner.capitalize()} Wins!"
-        text_surf = big_font.render(text, True, BLACK)
-        screen.blit(text_surf, (WIDTH // 2 - text_surf.get_width() // 2, 200))
-        restart_button.draw()
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if restart_button.is_clicked(event):
-                restart_button.action()
-
-        pygame.display.flip()
-
-# Game loop
-def game_loop():
-    global icons
-    clock = pygame.time.Clock()
-
-    while game_running:
-        screen.fill(WHITE)
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        # Move and draw icons
-        for icon in icons:
-            icon.move()
-            icon.draw()
-
-        # Check for a winner
-        types = {icon.type for icon in icons}
-        if len(types) == 1:
-            victory_screen(list(types)[0])
-
-        pygame.display.flip()
-        clock.tick(FPS)
-
-# Run the game
-main_menu()
-game_loop()
+pygame.quit()
