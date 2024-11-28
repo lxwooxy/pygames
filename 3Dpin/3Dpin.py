@@ -10,9 +10,9 @@ hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7
 pygame.init()
 
 # Screen dimensions and 3D settings
-WIDTH, HEIGHT = 800, 600
+WIDTH, HEIGHT = 1200, 800
 DOT_SPACING = 10  # Reduced spacing for more dots
-GRID_DEPTH = 300  # Maximum depth of the 3D grid
+GRID_DEPTH = 50  # Maximum depth of the 3D grid
 FOV = 500  # Field of view for perspective projection
 DOT_RADIUS = 3
 
@@ -59,6 +59,35 @@ def update_dots(hand_landmarks_list):
             # Push dots outward based on combined influence
             z_new = GRID_DEPTH // 2 + influence / 5  # Scale influence
             dots[i][j] = (x, y, min(GRID_DEPTH, z_new))  # Cap depth
+            
+def draw_hand_outlines(hand_landmarks_list):
+    """Draw hand outlines to visualize the actual hand shape."""
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)  # Transparent overlay
+
+    for hand_landmarks in hand_landmarks_list:
+        hand_points = [
+            (int((landmark.x - 0.5) * WIDTH), int((landmark.y - 0.5) * HEIGHT))
+            for landmark in hand_landmarks.landmark
+        ]
+
+        # Draw lines connecting key points (fingers, palm)
+        pygame.draw.lines(overlay, (255, 255, 255, 50), True, hand_points[:5], 2)  # Palm outline
+        for i in range(5):  # Fingers
+            pygame.draw.lines(
+                overlay,
+                (255, 255, 255, 50),
+                False,
+                hand_points[i * 4 : (i + 1) * 4],
+                2,
+            )
+
+        # Highlight all landmarks
+        for point in hand_points:
+            pygame.draw.circle(overlay, (255, 255, 255, 100), point, 3)
+
+    # Blit the overlay onto the main screen
+    screen.blit(overlay, (0, 0))
+
 
 
 def draw_dots():
@@ -89,6 +118,7 @@ while running:
     result = hands.process(rgb_frame)
     if result.multi_hand_landmarks:
         update_dots(result.multi_hand_landmarks)
+        draw_hand_outlines(result.multi_hand_landmarks)
 
     # Draw the 3D dot grid
     draw_dots()
