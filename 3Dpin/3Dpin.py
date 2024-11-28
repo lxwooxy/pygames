@@ -46,6 +46,27 @@ def draw_dots():
             size = int(3 + z)  # Dot size depends on depth
             pygame.draw.circle(screen, (255, 255, 255), (x, y), size)
 
+def draw_hand_outlines(hand_landmarks_list):
+    # Create a transparent overlay surface
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    
+    for hand_landmarks in hand_landmarks_list:
+        # Extract hand points for outline
+        hand_points = [
+            (int(landmark.x * WIDTH), int(landmark.y * HEIGHT)) 
+            for landmark in hand_landmarks.landmark
+        ]
+        
+        # Draw faint outline around the hand
+        for point in hand_points:
+            pygame.draw.circle(overlay, (255, 255, 255, 50), point, 20)  # Transparent white circles
+
+        # Connect key points for a polygon effect
+        pygame.draw.polygon(overlay, (255, 255, 255, 30), hand_points[:5], width=2)  # Connect wrist and fingers
+
+    # Blit the overlay onto the main screen
+    screen.blit(overlay, (0, 0))
+
 running = True
 while running:
     for event in pygame.event.get():
@@ -63,7 +84,11 @@ while running:
     # Detect hands
     result = hands.process(rgb_frame)
     if result.multi_hand_landmarks:
+        # Update dots based on hand positions
         update_dots(result.multi_hand_landmarks)
+
+        # Draw hand outlines
+        draw_hand_outlines(result.multi_hand_landmarks)
 
     # Draw the dot grid
     draw_dots()
