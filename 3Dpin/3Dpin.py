@@ -10,8 +10,8 @@ pygame.init()
 
 # Screen dimensions and dot grid
 WIDTH, HEIGHT = 800, 600
-DOT_SPACING = 20
-DOT_DEPTH_RANGE = 10
+DOT_SPACING = 20  # Original spacing
+DOT_DEPTH_RANGE = 5  # Reduced range for less glow
 
 # Create a grid of dots
 dots = [[(x, y, 0) for y in range(0, HEIGHT, DOT_SPACING)] for x in range(0, WIDTH, DOT_SPACING)]
@@ -23,19 +23,21 @@ pygame.display.set_caption("3D Pin Toy")
 # Webcam setup
 cap = cv2.VideoCapture(0)
 
-def update_dots(hand_landmarks):
+def update_dots(hand_landmarks_list):
     for i, column in enumerate(dots):
         for j, dot in enumerate(column):
             x, y, z = dot
-            # Find the distance to the nearest hand point
-            min_distance = float('inf')
-            for landmark in hand_landmarks.landmark:
-                hand_x, hand_y = int(landmark.x * WIDTH), int(landmark.y * HEIGHT)
-                distance = np.sqrt((x - hand_x)**2 + (y - hand_y)**2)
-                min_distance = min(min_distance, distance)
 
-            # Adjust z based on distance (closer = higher depth)
-            dots[i][j] = (x, y, max(0, DOT_DEPTH_RANGE - min_distance / 5))
+            # Find the minimum distance to any hand landmark
+            min_distance = float('inf')
+            for hand_landmarks in hand_landmarks_list:
+                for landmark in hand_landmarks.landmark:
+                    hand_x, hand_y = int(landmark.x * WIDTH), int(landmark.y * HEIGHT)
+                    distance = np.sqrt((x - hand_x)**2 + (y - hand_y)**2)
+                    min_distance = min(min_distance, distance)
+
+            # Adjust z based on distance (closer = higher depth, subtler glow)
+            dots[i][j] = (x, y, max(0, DOT_DEPTH_RANGE - min_distance / 10))  # Increased divisor
 
 def draw_dots():
     screen.fill((0, 0, 0))  # Clear the screen
@@ -61,8 +63,7 @@ while running:
     # Detect hands
     result = hands.process(rgb_frame)
     if result.multi_hand_landmarks:
-        for hand_landmarks in result.multi_hand_landmarks:
-            update_dots(hand_landmarks)
+        update_dots(result.multi_hand_landmarks)
 
     # Draw the dot grid
     draw_dots()
