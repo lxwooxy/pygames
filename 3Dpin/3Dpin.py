@@ -11,7 +11,7 @@ pygame.init()
 
 # Screen dimensions and 3D settings
 WIDTH, HEIGHT = 800, 600
-DOT_SPACING = 20
+DOT_SPACING = 10  # Reduced spacing for more dots
 GRID_DEPTH = 300  # Maximum depth of the 3D grid
 FOV = 500  # Field of view for perspective projection
 DOT_RADIUS = 3
@@ -52,8 +52,11 @@ def update_dots(hand_landmarks_list):
                     distance = math.sqrt((x - hand_x)**2 + (y - hand_y)**2)
                     min_distance = min(min_distance, distance)
 
-            # Push dots outward based on proximity
-            z_new = GRID_DEPTH // 2 - max(0, GRID_DEPTH // 2 - min_distance / 5)
+            # Push dots outward based on proximity, with a smaller influence radius
+            if min_distance < 100:  # Only affect dots within 100 pixels of the hand
+                z_new = GRID_DEPTH // 2 - max(0, GRID_DEPTH // 2 - min_distance / 5)
+            else:
+                z_new = GRID_DEPTH // 2  # Reset dots not affected by the hand
             dots[i][j] = (x, y, max(0, z_new))  # Ensure z stays within bounds
 
 def draw_dots():
