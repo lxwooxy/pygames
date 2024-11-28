@@ -18,7 +18,7 @@ dots = [[(x, y, 0) for y in range(0, HEIGHT, DOT_SPACING)] for x in range(0, WID
 
 # Initialize Pygame screen
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("3D Pin Toy")
+pygame.display.set_caption("2.5D Pin Toy")
 
 # Webcam setup
 cap = cv2.VideoCapture(0)
