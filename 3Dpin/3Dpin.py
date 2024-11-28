@@ -11,7 +11,7 @@ pygame.init()
 
 # Screen dimensions and 3D settings
 WIDTH, HEIGHT = 800, 600
-DOT_SPACING = 20
+DOT_SPACING = 10  # Reduced spacing for more dots
 GRID_DEPTH = 300  # Maximum depth of the 3D grid
 FOV = 500  # Field of view for perspective projection
 DOT_RADIUS = 3
@@ -37,24 +37,29 @@ def perspective_projection(x, y, z):
     return screen_x, screen_y, factor
 
 def update_dots(hand_landmarks_list):
-    """Update dot positions based on hand proximity."""
+    """Update dot positions to reflect the shape of the hand more accurately."""
     for i, column in enumerate(dots):
         for j, dot in enumerate(column):
             x, y, z = dot
+            influence = 0  # Total influence from all hand landmarks
 
-            # Find the minimum distance to any hand landmark
-            min_distance = float('inf')
             for hand_landmarks in hand_landmarks_list:
                 for landmark in hand_landmarks.landmark:
                     # Map hand positions to the 3D grid
                     hand_x = int((landmark.x - 0.5) * WIDTH)  # Normalize to grid
                     hand_y = int((landmark.y - 0.5) * HEIGHT)
-                    distance = math.sqrt((x - hand_x)**2 + (y - hand_y)**2)
-                    min_distance = min(min_distance, distance)
 
-            # Push dots outward based on proximity
-            z_new = GRID_DEPTH // 2 - max(0, GRID_DEPTH // 2 - min_distance / 5)
-            dots[i][j] = (x, y, max(0, z_new))  # Ensure z stays within bounds
+                    # Calculate distance from dot to landmark
+                    distance = math.sqrt((x - hand_x)**2 + (y - hand_y)**2)
+
+                    # Influence decreases with distance (falloff)
+                    if distance < 100:  # Only consider close landmarks
+                        influence += max(0, 100 - distance)  # Falloff from 100px
+
+            # Push dots outward based on combined influence
+            z_new = GRID_DEPTH // 2 + influence / 5  # Scale influence
+            dots[i][j] = (x, y, min(GRID_DEPTH, z_new))  # Cap depth
+
 
 def draw_dots():
     """Render the 3D dots on the screen with perspective projection."""
