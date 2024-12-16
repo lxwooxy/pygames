@@ -52,6 +52,13 @@ while True:
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     result = face_mesh.process(rgb_frame)
 
+    # Check if recalibration is triggered
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord('r'):  # Reset calibration if 'r' is pressed
+        calibration_points = {"top_left": None, "top_right": None, "bottom_left": None, "bottom_right": None}
+        current_corner = 0
+        print("Recalibration started!")
+
     # Draw calibration marker if calibration is not complete
     if current_corner < len(corner_names):
         corner_name = corner_names[current_corner]
@@ -83,9 +90,10 @@ while True:
             # Calibration process
             if current_corner < len(corner_names):
                 # Wait for user to press 'd' to save the gaze position
-                if cv2.waitKey(1) & 0xFF == ord('d'):
+                if key == ord('d'):
                     calibration_points[corner_names[current_corner]] = (gaze_x, gaze_y)
                     current_corner += 1
+                    print(f"Calibrated {corner_names[current_corner - 1]}: ({gaze_x}, {gaze_y})")
             else:
                 # Map gaze position to screen coordinates after calibration
                 screen_x, screen_y = map_gaze_to_screen(gaze_x, gaze_y, width, height)
@@ -94,10 +102,10 @@ while True:
                 cv2.circle(frame, (screen_x, screen_y), 10, (255, 0, 0), -1)
 
     # Display the frame
-    cv2.imshow("Gaze Tracking", frame)
+    cv2.imshow("Gaze Tracking with Recalibration", frame)
 
     # Exit the program
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    if key == ord('q'):
         break
 
 cap.release()
