@@ -22,7 +22,7 @@ def get_gaze_position(landmarks, width, height):
     return gaze_x, gaze_y
 
 def map_gaze_to_screen(gaze_x, gaze_y, width, height):
-    """Map gaze coordinates to full screen using calibration points."""
+    """Map gaze coordinates to full screen using calibration points with bounds."""
     top_left = calibration_points["top_left"]
     top_right = calibration_points["top_right"]
     bottom_left = calibration_points["bottom_left"]
@@ -33,10 +33,11 @@ def map_gaze_to_screen(gaze_x, gaze_y, width, height):
     # Interpolate vertically
     y_ratio = (gaze_y - top_left[1]) / (bottom_left[1] - top_left[1])
 
-    # Scale to full screen
-    screen_x = int(x_ratio * width)
-    screen_y = int(y_ratio * height)
+    # Scale to full screen with bounds
+    screen_x = int(min(max(x_ratio * width, 0), width - 1))
+    screen_y = int(min(max(y_ratio * height, 0), height - 1))
     return screen_x, screen_y
+
 
 # Main loop
 while True:
@@ -51,13 +52,6 @@ while True:
     # Convert the image to RGB for Mediapipe processing
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     result = face_mesh.process(rgb_frame)
-
-    # Check if recalibration is triggered
-    key = cv2.waitKey(1) & 0xFF
-    if key == ord('r'):  # Reset calibration if 'r' is pressed
-        calibration_points = {"top_left": None, "top_right": None, "bottom_left": None, "bottom_right": None}
-        current_corner = 0
-        print("Recalibration started!")
 
     # Draw calibration marker if calibration is not complete
     if current_corner < len(corner_names):
@@ -90,10 +84,9 @@ while True:
             # Calibration process
             if current_corner < len(corner_names):
                 # Wait for user to press 'd' to save the gaze position
-                if key == ord('d'):
+                if cv2.waitKey(1) & 0xFF == ord('d'):
                     calibration_points[corner_names[current_corner]] = (gaze_x, gaze_y)
                     current_corner += 1
-                    print(f"Calibrated {corner_names[current_corner - 1]}: ({gaze_x}, {gaze_y})")
             else:
                 # Map gaze position to screen coordinates after calibration
                 screen_x, screen_y = map_gaze_to_screen(gaze_x, gaze_y, width, height)
@@ -102,11 +95,18 @@ while True:
                 cv2.circle(frame, (screen_x, screen_y), 10, (255, 0, 0), -1)
 
     # Display the frame
-    cv2.imshow("Gaze Tracking with Recalibration", frame)
+    cv2.imshow("Gaze Tracking", frame)
 
     # Exit the program
-    if key == ord('q'):
+    if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+    # Check for keypress
+    # Check if recalibration is triggered
+    if cv2.waitKey(1) & 0xFF == ord('r'):
+        # Reset calibration if 'r' is pressed
+        calibration_points = {"top_left": None, "top_right": None, "bottom_left": None, "bottom_right": None}
+        current_corner = 0
+        print("Recalibration started!")
 
 cap.release()
 cv2.destroyAllWindows()
