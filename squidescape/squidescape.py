@@ -41,8 +41,8 @@ def map_gaze_to_screen(gaze_x, gaze_y, width, height):
 #declare squid.
 squid = cv2.imread('squid.jpg')
 squid_height, squid_width, _ = squid.shape
-#resize squid to 100x100
-squid = cv2.resize(squid, (100, 100))
+#resize squid to 20x20
+squid = cv2.resize(squid, (20, 20))
 
 # Main loop
 while True:
@@ -97,6 +97,7 @@ while True:
                 screen_x, screen_y = map_gaze_to_screen(gaze_x, gaze_y, width, height)
 
                 # Draw the gaze dot
+                # .circle(image, center_coordinates, radius, color, thickness)
                 cv2.circle(frame, (screen_x, screen_y), 10, (255, 0, 0), -1) #color is BGR, which is so cool and not weird at all
                 
                 # #add the squid.jpg image on top of the gaze dot
