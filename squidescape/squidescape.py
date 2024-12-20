@@ -101,8 +101,7 @@ while True:
                 cv2.circle(frame, (screen_x, screen_y), 10, (255, 0, 0), -1) #color is BGR, which is so cool and not weird at all
                 
                 # #add the squid.jpg image on top of the gaze dot
-                # if screen_y + squid_height <= height and screen_x + squid_width <= width:
-                #     frame[screen_y:screen_y+squid_height, screen_x:screen_x+squid_width] = squid
+                
                 
                 
 
