@@ -20,13 +20,14 @@ class DurakGame:
         self.trump_suit = self.trump_card.split(' of ')[1]
         self.current_attacker = 0
         self.current_defender = 1
-        self.center_cards = []
+        self.center_cards = []  # Cards currently in play
         self.status_var = tk.StringVar()
-        self.status_var.set("Welcome to Durak!")
+        self.status_var.set("Welcome to Durak! Your turn to attack.")
         self.init_ui()
 
         # Deal cards to players
         self.deal_cards()
+        self.update_ui()
 
     def init_ui(self):
         """Initialize the game UI."""
@@ -45,13 +46,12 @@ class DurakGame:
         self.action_button = tk.Button(self.root, text="Next Move", command=self.next_move, font=("Arial", 14))
         self.action_button.pack(side=tk.TOP, pady=5)
 
-        self.update_ui()
-
     def deal_cards(self):
         """Deal six cards to each player."""
         for player in self.players:
             while len(player) < 6 and self.deck:
                 player.append(self.deck.pop())
+        print(f"Player 0 cards: {self.players[0]}")  # Debug: Verify player cards
 
     def update_ui(self):
         """Update the UI with the latest game state."""
@@ -60,9 +60,12 @@ class DurakGame:
             widget.destroy()
 
         # Display player's cards
-        for card in self.players[0]:
-            btn = tk.Button(self.player_hand_frame, text=card, command=lambda c=card: self.player_move(c))
-            btn.pack(side=tk.LEFT, padx=5, pady=5)
+        if self.players[0]:  # Ensure the player has cards
+            for card in self.players[0]:
+                btn = tk.Button(self.player_hand_frame, text=card, command=lambda c=card: self.player_move(c))
+                btn.pack(side=tk.LEFT, padx=5, pady=5)
+        else:
+            self.status_var.set("You have no cards left!")
 
         # Display trump card
         self.canvas.delete("all")
@@ -70,7 +73,7 @@ class DurakGame:
         self.canvas.create_text(400, 100, text=f"Trump Suit: {self.trump_suit}", font=("Arial", 16), fill="white")
 
         # Display center cards
-        self.canvas.create_text(400, 300, text="Center Cards", font=("Arial", 16), fill="white")
+        self.canvas.create_text(400, 300, text="Cards in Play", font=("Arial", 16), fill="white")
         y = 320
         for card in self.center_cards:
             self.canvas.create_text(400, y, text=card, font=("Arial", 14), fill="yellow")
@@ -82,10 +85,9 @@ class DurakGame:
             self.center_cards.append(card)
             self.players[0].remove(card)
             self.status_var.set(f"You attacked with {card}. Waiting for defender.")
+            self.update_ui()
         else:
             self.status_var.set("You can't defend for the computer. Click 'Next Move'.")
-
-        self.update_ui()
 
     def next_move(self):
         """Handle the computer's move."""
