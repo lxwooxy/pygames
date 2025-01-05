@@ -1,4 +1,3 @@
-import tkinter as tk
 import random
 
 # Suits and Ranks
@@ -10,8 +9,7 @@ def create_deck():
     return [f"{rank} of {suit}" for suit in suits for rank in ranks]
 
 class DurakGame:
-    def __init__(self, root, num_players=2):
-        self.root = root
+    def __init__(self, num_players=2):
         self.num_players = num_players
         self.deck = create_deck()
         random.shuffle(self.deck)
@@ -21,117 +19,133 @@ class DurakGame:
         self.current_attacker = 0
         self.current_defender = 1
         self.center_cards = []  # Cards currently in play
-        self.status_var = tk.StringVar()
-        self.status_var.set("Welcome to Durak! Your turn to attack.")
-        self.init_ui()
 
         # Deal cards to players
         self.deal_cards()
-        self.update_ui()
-
-    def init_ui(self):
-        """Initialize the game UI."""
-        self.canvas = tk.Canvas(self.root, width=800, height=600, bg="green")
-        self.canvas.pack()
-
-        # Player hand display
-        self.player_hand_frame = tk.Frame(self.root, bg="green")
-        self.player_hand_frame.pack(side=tk.BOTTOM, fill=tk.X)
-
-        # Status label
-        self.status_label = tk.Label(self.root, textvariable=self.status_var, font=("Arial", 16), bg="green", fg="white")
-        self.status_label.pack(side=tk.TOP, pady=10)
-
-        # Button for actions
-        self.action_button = tk.Button(self.root, text="Next Move", command=self.next_move, font=("Arial", 14))
-        self.action_button.pack(side=tk.TOP, pady=5)
 
     def deal_cards(self):
         """Deal six cards to each player."""
         for player in self.players:
             while len(player) < 6 and self.deck:
                 player.append(self.deck.pop())
-        print(f"Player 0 cards after dealing: {self.players[0]}")  # Debug: Ensure cards are dealt
 
-    def update_ui(self):
-        """Update the UI with the latest game state."""
-        # Clear player hand frame
-        for widget in self.player_hand_frame.winfo_children():
-            widget.destroy()
+    def display_game_state(self):
+        """Display the current game state."""
+        print("\n" + "=" * 40)
+        print(f"Trump Card: {self.trump_card} (Trump Suit: {self.trump_suit})")
+        print("Cards in Play: ", ", ".join(self.center_cards) if self.center_cards else "None")
+        print(f"Your Hand: {', '.join(self.players[0])}")
+        print("=" * 40)
 
-        # Display player's cards
-        if self.players[0]:  # Ensure the player has cards
-            print(f"Rendering Player 0 cards: {self.players[0]}")  # Debug: Ensure cards are being rendered
-            for card in self.players[0]:
-                btn = tk.Button(self.player_hand_frame, text=card, command=lambda c=card: self.player_move(c))
-                btn.pack(side=tk.LEFT, padx=5, pady=5)
-        else:
-            self.status_var.set("You have no cards left!")
+    def player_move(self):
+        """Handle the player's move."""
+        while True:
+            try:
+                self.display_game_state()
+                if len(self.center_cards) % 2 == 0:  # Player is attacking
+                    move = input("Choose a card to attack with (e.g., '7 of Spades'): ").strip()
+                else:  # Player is defending
+                    move = input("Choose a card to defend with (e.g., '7 of Spades') or type 'pickup': ").strip()
 
-        # Display trump card
-        self.canvas.delete("all")
-        self.canvas.create_text(400, 50, text=f"Trump Card: {self.trump_card}", font=("Arial", 16), fill="white")
-        self.canvas.create_text(400, 100, text=f"Trump Suit: {self.trump_suit}", font=("Arial", 16), fill="white")
+                if move == "pickup" and len(self.center_cards) % 2 == 1:
+                    # Player chooses to pick up cards
+                    print("You picked up the cards!")
+                    self.players[0].extend(self.center_cards)
+                    self.center_cards = []
+                    return "next_turn"
+                elif move in self.players[0]:
+                    # Validate and play the chosen card
+                    if self.validate_move(move):
+                        self.center_cards.append(move)
+                        self.players[0].remove(move)
+                        return "valid_move"
+                    else:
+                        print("Invalid move. Try again.")
+                else:
+                    print("Invalid input. Please choose a valid card.")
+            except Exception as e:
+                print(f"Error: {e}. Try again.")
 
-        # Display center cards
-        self.canvas.create_text(400, 300, text="Cards in Play", font=("Arial", 16), fill="white")
-        y = 320
-        for card in self.center_cards:
-            self.canvas.create_text(400, y, text=card, font=("Arial", 14), fill="yellow")
-            y += 20
-
-    def player_move(self, card):
-        """Handle player's move."""
-        if len(self.center_cards) % 2 == 0:  # Player is attacking
-            self.center_cards.append(card)
-            self.players[0].remove(card)
-            self.status_var.set(f"You attacked with {card}. Waiting for defender.")
-            self.update_ui()
-        else:
-            self.status_var.set("You can't defend for the computer. Click 'Next Move'.")
-
-    def next_move(self):
-        """Handle the computer's move."""
-        if len(self.center_cards) % 2 == 1:  # Defender's turn
-            defender_cards = self.players[self.current_defender]
+    def validate_move(self, card):
+        """Validate the player's move."""
+        if len(self.center_cards) % 2 == 0:  # Attack move
+            return True
+        else:  # Defense move
             attack_card = self.center_cards[-1]
-            defending_card = None
+            attack_rank, attack_suit = attack_card.split(' of ')
+            rank, suit = card.split(' of ')
+            if suit == attack_suit and ranks.index(rank) > ranks.index(attack_rank):
+                return True  # Valid defense with the same suit
+            elif suit == self.trump_suit and attack_suit != self.trump_suit:
+                return True  # Valid defense with a trump card
+            return False
 
-            # Try to defend with a card of the same suit or trump
-            for card in defender_cards:
+    def computer_move(self):
+        """Handle the computer's move."""
+        if len(self.center_cards) % 2 == 0:  # Computer is attacking
+            for card in self.players[self.current_attacker]:
+                self.center_cards.append(card)
+                self.players[self.current_attacker].remove(card)
+                print(f"Computer attacked with {card}.")
+                return "attack"
+        else:  # Computer is defending
+            attack_card = self.center_cards[-1]
+            attack_rank, attack_suit = attack_card.split(' of ')
+            for card in self.players[self.current_defender]:
                 rank, suit = card.split(' of ')
-                attack_rank, attack_suit = attack_card.split(' of ')
                 if suit == attack_suit and ranks.index(rank) > ranks.index(attack_rank):
-                    defending_card = card
-                    break
+                    self.center_cards.append(card)
+                    self.players[self.current_defender].remove(card)
+                    print(f"Computer defended with {card}.")
+                    return "defense"
                 elif suit == self.trump_suit and attack_suit != self.trump_suit:
-                    defending_card = card
-                    break
+                    self.center_cards.append(card)
+                    self.players[self.current_defender].remove(card)
+                    print(f"Computer defended with {card}.")
+                    return "defense"
 
-            if defending_card:
-                self.center_cards.append(defending_card)
-                defender_cards.remove(defending_card)
-                self.status_var.set(f"Defender defended with {defending_card}.")
-            else:
-                self.status_var.set("Defender couldn't defend. Cards picked up.")
-                self.players[self.current_defender].extend(self.center_cards)
-                self.center_cards = []
-                self.current_attacker = (self.current_attacker + 1) % self.num_players
-                self.current_defender = (self.current_defender + 1) % self.num_players
-        else:  # New attack phase
-            self.status_var.set("New attack phase. Your turn to attack.")
+            # Computer cannot defend and picks up the cards
+            print("Computer couldn't defend and picked up the cards.")
+            self.players[self.current_defender].extend(self.center_cards)
+            self.center_cards = []
+            return "pickup"
 
-        # Refill cards
-        self.deal_cards()
-        self.update_ui()
+    def next_turn(self):
+        """Advance to the next turn."""
+        self.current_attacker = (self.current_attacker + 1) % self.num_players
+        self.current_defender = (self.current_defender + 1) % self.num_players
 
-# Tkinter app initialization
-def start_game(num_players):
-    root = tk.Tk()
-    root.title("Durak Card Game")
-    root.geometry("800x600")
-    DurakGame(root, num_players=num_players)
-    root.mainloop()
+    def check_winner(self):
+        """Check if the game has a winner."""
+        for i, player in enumerate(self.players):
+            if not player:
+                print(f"Player {i} is out of cards!")
+                if i == 0:
+                    print("Congratulations! You win!")
+                else:
+                    print("You lost. Better luck next time!")
+                return True
+        return False
 
+    def play_game(self):
+        """Main game loop."""
+        print("Welcome to Durak!")
+        while True:
+            if self.check_winner():
+                break
+
+            if self.current_attacker == 0:  # Player's turn
+                result = self.player_move()
+            else:  # Computer's turn
+                result = self.computer_move()
+
+            if result in ["pickup", "next_turn"]:
+                self.next_turn()
+
+            # Refill cards
+            self.deal_cards()
+
+# Start the game
 if __name__ == "__main__":
-    start_game(num_players=2)
+    game = DurakGame(num_players=2)
+    game.play_game()
