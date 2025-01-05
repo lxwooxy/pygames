@@ -51,7 +51,7 @@ class DurakGame:
         for player in self.players:
             while len(player) < 6 and self.deck:
                 player.append(self.deck.pop())
-        print(f"Player 0 cards: {self.players[0]}")  # Debug: Verify player cards
+        print(f"Player 0 cards after dealing: {self.players[0]}")  # Debug: Ensure cards are dealt
 
     def update_ui(self):
         """Update the UI with the latest game state."""
@@ -61,6 +61,7 @@ class DurakGame:
 
         # Display player's cards
         if self.players[0]:  # Ensure the player has cards
+            print(f"Rendering Player 0 cards: {self.players[0]}")  # Debug: Ensure cards are being rendered
             for card in self.players[0]:
                 btn = tk.Button(self.player_hand_frame, text=card, command=lambda c=card: self.player_move(c))
                 btn.pack(side=tk.LEFT, padx=5, pady=5)
