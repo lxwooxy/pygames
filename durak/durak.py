@@ -7,26 +7,46 @@ ranks = ['6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
 # Create a deck of cards
 def create_deck():
     return [f"{rank} of {suit}" for suit in suits for rank in ranks]
+
 class AIOpponent:
     def __init__(self, hand, trump_suit):
         self.hand = hand
-        self.trump_suit = None
+        self.trump_suit = trump_suit
 
     def choose_attack_card(self, center_cards):
-        """Choose a card to attack with."""
-        for card in self.hand:
-            return card  # Simplified logic for choosing a card
+        """Choose the weakest card to attack with."""
+        non_trump_cards = [card for card in self.hand if not card.endswith(f"of {self.trump_suit}")]
+        trump_cards = [card for card in self.hand if card.endswith(f"of {self.trump_suit}")]
 
-    def choose_defense_card(self, attack_card, trump_suit):
-        """Choose a card to defend with."""
+        if non_trump_cards:
+            # Return the weakest non-trump card
+            return sorted(non_trump_cards, key=lambda c: ranks.index(c.split(' of ')[0]))[0]
+        elif trump_cards:
+            # Return the weakest trump card if no non-trump cards are available
+            return sorted(trump_cards, key=lambda c: ranks.index(c.split(' of ')[0]))[0]
+        return None
+
+    def choose_defense_card(self, attack_card):
+        """Choose the weakest valid card to defend with."""
         attack_rank, attack_suit = attack_card.split(' of ')
-        for card in self.hand:
-            rank, suit = card.split(' of ')
-            if suit == attack_suit and ranks.index(rank) > ranks.index(attack_rank):
-                return card  # Valid defense with the same suit
-            elif suit == trump_suit and attack_suit != trump_suit:
-                return card  # Valid defense with a trump card
+
+        # Find valid defense cards
+        same_suit_cards = [
+            card for card in self.hand if card.endswith(f"of {attack_suit}") and
+            ranks.index(card.split(' of ')[0]) > ranks.index(attack_rank)
+        ]
+        trump_cards = [
+            card for card in self.hand if card.endswith(f"of {self.trump_suit}") and attack_suit != self.trump_suit
+        ]
+
+        if same_suit_cards:
+            # Use the weakest card of the same suit
+            return sorted(same_suit_cards, key=lambda c: ranks.index(c.split(' of ')[0]))[0]
+        elif trump_cards:
+            # Use the weakest trump card if defending with the same suit isn't possible
+            return sorted(trump_cards, key=lambda c: ranks.index(c.split(' of ')[0]))[0]
         return None  # No valid defense card found
+
     
 class DurakGame:
     def __init__(self, num_players=2):
