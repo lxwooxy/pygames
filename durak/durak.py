@@ -7,7 +7,27 @@ ranks = ['6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
 # Create a deck of cards
 def create_deck():
     return [f"{rank} of {suit}" for suit in suits for rank in ranks]
+class AIOpponent:
+    def __init__(self, hand, trump_suit):
+        self.hand = hand
+        self.trump_suit = None
 
+    def choose_attack_card(self, center_cards):
+        """Choose a card to attack with."""
+        for card in self.hand:
+            return card  # Simplified logic for choosing a card
+
+    def choose_defense_card(self, attack_card, trump_suit):
+        """Choose a card to defend with."""
+        attack_rank, attack_suit = attack_card.split(' of ')
+        for card in self.hand:
+            rank, suit = card.split(' of ')
+            if suit == attack_suit and ranks.index(rank) > ranks.index(attack_rank):
+                return card  # Valid defense with the same suit
+            elif suit == trump_suit and attack_suit != trump_suit:
+                return card  # Valid defense with a trump card
+        return None  # No valid defense card found
+    
 class DurakGame:
     def __init__(self, num_players=2):
         self.num_players = num_players
