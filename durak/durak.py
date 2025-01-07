@@ -68,7 +68,7 @@ class DurakGame:
 
         # Deal cards to players
         self.deal_cards()
-
+        
     def next_turn(self, defender_picked_up=False):
         """
         Advance to the next turn.
@@ -84,6 +84,45 @@ class DurakGame:
             self.current_attacker = self.current_defender
             self.current_defender = (self.current_attacker + 1) % self.num_players
 
+    def deal_cards(self):
+        """Deal six cards to each player."""
+        for player in self.players:
+            while len(player) < 6 and self.deck:
+                player.append(self.deck.pop())
+        # Sync AI hands
+        for ai in self.ai_opponents:
+            ai.hand = self.players[self.ai_opponents.index(ai) + 1]
+
+    def display_game_state(self):
+        """Display the current game state."""
+        print("\n" + "=" * 40)
+        print(f"Trump Card: {self.trump_card} (Trump Suit: {self.trump_suit})")
+        print("Cards in Play: ", ", ".join(self.center_cards) if self.center_cards else "None")
+        print(f"Your Hand: {', '.join(self.players[0])}")
+        print("=" * 40)
+
+
+    def validate_move(self, card):
+        """Validate the player's move."""
+        if len(self.center_cards) % 2 == 0:  # Attack move
+            return True
+        else:  # Defense move
+            attack_card = self.center_cards[-1]
+            attack_rank, attack_suit = attack_card.split(' of ')
+            rank, suit = card.split(' of ')
+            if suit == attack_suit and ranks.index(rank) > ranks.index(attack_rank):
+                return True  # Valid defense with the same suit
+            elif suit == self.trump_suit and attack_suit != self.trump_suit:
+                return True  # Valid defense with a trump card
+            return False
+
+    
+
+    def next_turn(self):
+        """Advance to the next turn."""
+        self.current_attacker = (self.current_attacker + 1) % self.num_players
+        self.current_defender = (self.current_defender + 1) % self.num_players
+
     def check_winner(self):
         """Check if the game has a winner."""
         active_players = [i for i, player in enumerate(self.players) if player]
@@ -92,6 +131,66 @@ class DurakGame:
             print(f"Player {winner} is the winner!")
             return True
         return False
+
+    def player_move(self):
+        """Handle the player's move."""
+        while True:
+            try:
+                self.display_game_state()
+
+                if len(self.center_cards) % 2 == 0:  # Player is attacking
+                    move = input("Choose a card to attack with (e.g., '7 of Spades'): ").strip()
+                    if move in self.players[0]:
+                        # Validate and play the chosen card
+                        self.center_cards.append(move)
+                        self.players[0].remove(move)
+                        print(f"You attacked with {move}.")
+                        return "player_attacked"
+                    else:
+                        print("Invalid input. Please choose a valid card.")
+                else:  # Player is defending
+                    move = input("Choose a card to defend with (e.g., '7 of Spades') or type 'pickup': ").strip()
+                    if move == "pickup":
+                        # Player chooses to pick up cards
+                        print("You picked up the cards!")
+                        self.players[0].extend(self.center_cards)
+                        self.center_cards = []
+                        return "pickup"
+                    elif move in self.players[0] and self.validate_move(move):
+                        # Validate and play the chosen card
+                        self.center_cards.append(move)
+                        self.players[0].remove(move)
+                        print(f"You defended with {move}.")
+                        return "player_defended"
+                    else:
+                        print("Invalid move. Try again.")
+            except Exception as e:
+                print(f"Error: {e}. Try again.")
+
+    def computer_move(self):
+        """Handle the AI's move."""
+        ai = self.ai_opponents[self.current_attacker - 1]
+
+        if len(self.center_cards) % 2 == 0:  # AI is attacking
+            attack_card = ai.choose_attack_card(self.center_cards)
+            if attack_card:
+                self.center_cards.append(attack_card)
+                self.players[self.current_attacker].remove(attack_card)
+                print(f"Computer attacked with {attack_card}.")
+                return "computer_attacked"
+        else:  # AI is defending
+            attack_card = self.center_cards[-1]
+            defense_card = ai.choose_defense_card(attack_card)
+            if defense_card:
+                self.center_cards.append(defense_card)
+                self.players[self.current_defender].remove(defense_card)
+                print(f"Computer defended with {defense_card}.")
+                return "computer_defended"
+            else:
+                print("Computer couldn't defend and picked up the cards.")
+                self.players[self.current_defender].extend(self.center_cards)
+                self.center_cards = []
+                return "pickup"
 
     def play_game(self):
         """Main game loop."""
