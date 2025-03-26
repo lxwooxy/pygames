@@ -1,5 +1,12 @@
 import cv2
 import mediapipe as mp
+import numpy as np
+import random
+
+squid_pos = None  # Will initialize after we know width/height
+
+
+
 
 # Initialize Mediapipe Face Mesh
 mp_face_mesh = mp.solutions.face_mesh
@@ -53,6 +60,10 @@ while True:
     # Flip frame for a mirror effect
     frame = cv2.flip(frame, 1)
     height, width, _ = frame.shape
+    
+    if squid_pos is None:
+        squid_pos = [random.randint(0, width - 20), random.randint(0, height - 20)]
+
 
     # Convert the image to RGB for Mediapipe processing
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -95,18 +106,37 @@ while True:
             else:
                 # Map gaze position to screen coordinates after calibration
                 screen_x, screen_y = map_gaze_to_screen(gaze_x, gaze_y, width, height)
+                
+                # Calculate distance between gaze and squid
+                dx = screen_x - squid_pos[0]
+                dy = screen_y - squid_pos[1]
+                distance = (dx ** 2 + dy ** 2) ** 0.5
+
+                # If the gaze is too close, move the squid somewhere else
+                if distance < 40:
+                    print("TOO CLOSE! MOVING SQUID!")
+                    squid_pos[0] = random.randint(0, width - 20)
+                    squid_pos[1] = random.randint(0, height - 20)
+
 
                 # Draw the gaze dot
                 # .circle(image, center_coordinates, radius, color, thickness)
                 cv2.circle(frame, (screen_x, screen_y), 10, (255, 0, 0), -1) #color is BGR, which is so cool and not weird at all
                 
-                # #add the squid.jpg image on top of the gaze dot
+                #add the squid.jpg image on top of the gaze dot
+                x, y = squid_pos
+                # Ensure we don't go out of bounds
+                if y + 20 <= height and x + 20 <= width:
+                    frame[y:y+20, x:x+20] = squid
+
                 
                 
                 
 
-    # Display the frame
+    cv2.namedWindow("Gaze Tracking", cv2.WND_PROP_FULLSCREEN)
+    cv2.setWindowProperty("Gaze Tracking", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.imshow("Gaze Tracking", frame)
+
 
     # Exit the program
     if cv2.waitKey(1) & 0xFF == ord('q'):
